@@ -1,0 +1,52 @@
+---
+- name: Установка лицензии для КриптоПро 5
+  hosts: all
+  become: true
+  gather_facts: no
+  vars:
+    json_file: /run/media/ad/Red_OS/auto_liscense_ansible_pb/ip_licenses.json  # Путь к JSON файлу
+
+  tasks:
+    - name: Загрузка данных из JSON файла
+      delegate_to: localhost
+      run_once: true
+      slurp:
+        src: "{{ json_file }}"
+      register: json_file_content
+
+    - name: Декодирование JSON-содержимого
+      set_fact:
+        json_data: "{{ json_file_content['content'] | b64decode | from_json }}"
+    
+    - name: Отладка декодированного JSON
+      debug:
+        var: json_data
+
+    - name: Получение IP-адреса хоста
+      set_fact:
+        host_ip: "{{ inventory_hostname }}"
+
+    - name: Проверка наличия IP-адреса в JSON и получение ключа лицензии
+      set_fact:
+        license_key: "{{ json_data[host_ip] if host_ip in json_data else None }}"
+
+    - name: Проверка, был ли получен ключ лицензии
+      debug:
+        msg: "License key for {{ host_ip }}: {{ license_key }}"
+
+    - name: Установка лицензии
+      command: /opt/cprocsp/sbin/amd64/cpconfig -license -set {{ license_key }}
+      when: license_key is not none
+
+    - name: Проверка установленной лицензии
+      command: /opt/cprocsp/sbin/amd64/cpconfig -license -view
+      register: license_view
+
+    - name: Вывод результата проверки лицензии
+      debug:
+        var: license_view.stdout
+
+    - name: Проверка наличия ошибок при установке лицензии
+      debug:
+        msg: "Installation of license failed on {{ inventory_hostname }}" 
+      when: license_view.rc != 0
