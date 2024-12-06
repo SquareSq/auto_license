@@ -4,7 +4,7 @@
   become: true
   gather_facts: no
   vars:
-    json_file: /run/media/ad/Red_OS/auto_liscense_ansible_pb/ip_licenses.json  # Путь к JSON файлу
+    json_file: /path/to/ip_licenses.json  # Путь к JSON файлу
 
   tasks:
     - name: Загрузка данных из JSON файла
